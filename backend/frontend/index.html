@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content Trust Platform — Analyze</title>
+<style>
+  /* ---- Design tokens ---------------------------------------------------
+     Direction: an instrument panel for writing, not a marketing page. Trust
+     is conveyed through legibility, provenance, and calm precision. The
+     signature element is the visible split between DETERMINISTIC (measured,
+     authoritative) and ADVISORY (AI, fallible) results — the product's actual
+     differentiator, made into the layout's spine. */
+  :root {
+    --ink:        #16181d;   /* near-black text */
+    --ink-soft:   #5b6270;   /* secondary text */
+    --paper:      #f7f6f3;   /* warm off-white base */
+    --panel:      #ffffff;
+    --line:       #e2e0d9;   /* hairline rules */
+    --measured:   #1d5c4f;   /* deterministic = green: measured, stable */
+    --advisory:   #6b4bd6;   /* advisory = violet: AI, distinct from measured */
+    --warn:       #b4520a;
+    --bad:        #a12b2b;
+    --font-body:  ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-data:  ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink:#eceae4; --ink-soft:#9aa0ac; --paper:#131418; --panel:#1b1d23;
+      --line:#2c2f37; --measured:#4fbfa5; --advisory:#a58bff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--font-body); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width: 940px; margin:0 auto; padding: 40px 20px 80px; }
+
+  header .eyebrow {
+    font-family:var(--font-data); font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--ink-soft); margin:0 0 6px;
+  }
+  header h1 { font-size: 30px; margin:0 0 6px; letter-spacing:-.01em; }
+  header p.sub { margin:0 0 28px; color:var(--ink-soft); max-width:60ch; }
+
+  .privacy {
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font-data); font-size:12px; color:var(--measured);
+    border:1px solid var(--line); border-radius:6px; padding:6px 10px;
+    margin-bottom:28px;
+  }
+  .privacy::before { content:"●"; }
+
+  label.field-label {
+    display:block; font-family:var(--font-data); font-size:12px;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+  textarea {
+    width:100%; min-height:180px; resize:vertical; padding:14px 16px;
+    font-family:var(--font-body); font-size:15px; line-height:1.6;
+    color:var(--ink); background:var(--panel);
+    border:1px solid var(--line); border-radius:10px;
+  }
+  textarea:focus { outline:2px solid var(--advisory); outline-offset:1px; }
+
+  .controls { display:flex; align-items:center; gap:16px; margin:14px 0 0; flex-wrap:wrap; }
+  .controls label.chk { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink-soft); }
+  .count { font-family:var(--font-data); font-size:12px; color:var(--ink-soft); margin-left:auto; }
+  button.run {
+    background:var(--ink); color:var(--paper); border:0; border-radius:8px;
+    padding:11px 22px; font-size:15px; font-weight:600; cursor:pointer;
+  }
+  button.run:hover:not(:disabled) { opacity:.9; }
+  button.run:disabled { opacity:.5; cursor:not-allowed; }
+  button.run:focus-visible { outline:2px solid var(--advisory); outline-offset:2px; }
+
+  /* config row for the API base */
+  .cfg { margin-top:12px; font-family:var(--font-data); font-size:12px; color:var(--ink-soft); }
+  .cfg input {
+    font-family:var(--font-data); font-size:12px; padding:4px 8px;
+    border:1px solid var(--line); border-radius:5px; background:var(--panel);
+    color:var(--ink); width:min(360px, 70%);
+  }
+
+  #status { margin-top:20px; font-family:var(--font-data); font-size:13px; min-height:18px; }
+  #status.err { color:var(--bad); }
+  #status.busy { color:var(--advisory); }
+
+  #results { margin-top:8px; display:none; }
+  #results.show { display:block; }
+
+  /* Composite score headline */
+  .composite {
+    display:flex; align-items:baseline; gap:14px;
+    border-top:1px solid var(--line); padding-top:26px; margin-top:26px;
+  }
+  .composite .num { font-family:var(--font-data); font-size:56px; font-weight:700; color:var(--measured); line-height:1; }
+  .composite .num small { font-size:22px; color:var(--ink-soft); font-weight:400; }
+  .composite .meta { font-size:13px; color:var(--ink-soft); }
+  .composite .meta code { font-family:var(--font-data); }
+
+  /* Provenance section headers — the signature device */
+  .prov { margin-top:34px; }
+  .prov > .tag {
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font-data); font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; padding:4px 9px; border-radius:5px; margin-bottom:14px;
+  }
+  .prov.measured > .tag { color:var(--measured); border:1px solid var(--measured); }
+  .prov.advisory > .tag { color:var(--advisory); border:1px solid var(--advisory); }
+  .prov .tag-note { font-family:var(--font-body); font-size:12px; color:var(--ink-soft); text-transform:none; letter-spacing:0; margin-left:6px; }
+
+  .metrics { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+  .metric {
+    background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:13px 15px;
+  }
+  .metric .name { font-size:12px; color:var(--ink-soft); text-transform:capitalize; margin-bottom:8px; }
+  .metric .bar { height:5px; background:var(--line); border-radius:3px; overflow:hidden; margin-bottom:8px; }
+  .metric .bar > span { display:block; height:100%; background:var(--measured); }
+  .metric .val { font-family:var(--font-data); font-size:20px; font-weight:600; }
+
+  .flags { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .flag { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--advisory); border-radius:7px; padding:11px 14px; }
+  .flag .phrase { font-family:var(--font-data); font-size:13px; font-weight:600; }
+  .flag .sev { font-family:var(--font-data); font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--warn); margin-left:8px; }
+  .flag .why, .flag .sugg { font-size:13px; color:var(--ink-soft); margin-top:4px; }
+  .flag .sugg::before { content:"→ "; color:var(--advisory); }
+
+  .notes { font-size:13px; color:var(--ink-soft); }
+  .notesbox { background:var(--panel); border:1px dashed var(--line); border-radius:8px; padding:12px 14px; margin-top:14px; }
+
+  /* Before / After */
+  .diff { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:640px){ .diff{ grid-template-columns:1fr; } .composite .num{font-size:44px;} }
+  .diff .col { background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:14px; }
+  .diff .col h4 { margin:0 0 10px; font-family:var(--font-data); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); }
+  .diff .col p { margin:0; font-size:14px; line-height:1.6; white-space:pre-wrap; }
+  .changes { list-style:none; padding:0; margin:14px 0 0; display:flex; flex-direction:column; gap:6px; }
+  .changes li { font-size:13px; color:var(--ink-soft); padding-left:16px; position:relative; }
+  .changes li::before { content:"·"; position:absolute; left:4px; color:var(--advisory); }
+
+  footer { margin-top:50px; border-top:1px solid var(--line); padding-top:16px; font-size:12px; color:var(--ink-soft); font-family:var(--font-data); }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none!important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Content Trust Platform</p>
+    <h1>Analyze your writing</h1>
+    <p class="sub">Transparent, explainable writing-quality scoring. Measured
+      metrics are computed deterministically; AI observations are clearly marked
+      as advisory and can never change the measured score.</p>
+    <div class="privacy">Your text is analyzed in memory and never stored</div>
+  </header>
+
+  <label class="field-label" for="text">Text to analyze</label>
+  <textarea id="text" placeholder="Paste the writing you want to analyze…"></textarea>
+
+  <div class="controls">
+    <label class="chk"><input type="checkbox" id="rewrite"> Also generate an improved version</label>
+    <span class="count" id="count">0 characters</span>
+  </div>
+  <div class="controls" style="margin-top:14px;">
+    <button class="run" id="run">Analyze</button>
+  </div>
+  <div class="cfg">
+    API endpoint: <input id="api" value="http://localhost:8000" spellcheck="false">
+    <span class="tag-note">— point this at your deployed Render URL</span>
+  </div>
+
+  <div id="status" role="status" aria-live="polite"></div>
+
+  <section id="results" aria-live="polite">
+    <div class="composite">
+      <div class="num" id="composite">—<small>/100</small></div>
+      <div class="meta">
+        <div>Trust composite · <span id="wordcount"></span> words · <span id="sentcount"></span> sentences</div>
+        <div>engine <code id="engineVer"></code> · request <code id="reqId"></code></div>
+      </div>
+    </div>
+
+    <div class="prov measured">
+      <span class="tag">Measured <span class="tag-note">deterministic · reproducible</span></span>
+      <div class="metrics" id="metrics"></div>
+    </div>
+
+    <div class="prov advisory" id="advisoryBlock">
+      <span class="tag">Advisory <span class="tag-note">AI-generated · does not affect the score</span></span>
+      <div id="tone" class="notes"></div>
+      <ul class="flags" id="flags"></ul>
+      <div id="clarity" class="notesbox" style="display:none"></div>
+    </div>
+
+    <div class="prov advisory" id="rewriteBlock" style="display:none">
+      <span class="tag">Improved version <span class="tag-note">AI-generated · your original is unchanged</span></span>
+      <div class="diff">
+        <div class="col"><h4>Original</h4><p id="original"></p></div>
+        <div class="col"><h4>Improved</h4><p id="improved"></p></div>
+      </div>
+      <ul class="changes" id="changes"></ul>
+    </div>
+
+    <div class="notesbox notes" id="systemNotes" style="display:none"></div>
+  </section>
+
+  <footer>Content Trust Platform · scores are a writing-quality composite, not a
+    guarantee of factual accuracy or authorship.</footer>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// SECURITY NOTES (client side):
+//  - ALL server-derived strings are inserted via textContent / createTextNode,
+//    never innerHTML. The API returns LLM-generated text (rewrite, flags); if
+//    that were written as HTML, a crafted input could achieve XSS (OWASP A03).
+//    textContent neutralizes markup.
+//  - NO localStorage / sessionStorage. The product promises text is never
+//    stored; the client honors that too. State lives only in JS memory for the
+//    life of the page.
+//  - The client calls YOUR API only. The OpenAI key never touches the browser.
+// ---------------------------------------------------------------------------
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+
+  var textEl = $("text"), runBtn = $("run"), statusEl = $("status"),
+      results = $("results"), countEl = $("count");
+
+  textEl.addEventListener("input", function () {
+    countEl.textContent = textEl.value.length.toLocaleString() + " characters";
+  });
+
+  function setStatus(msg, kind) {
+    statusEl.textContent = msg;
+    statusEl.className = kind || "";
+  }
+
+  function clearChildren(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
+  // Safe element builder — text only, no HTML parsing.
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;   // textContent = XSS-safe
+    return n;
+  }
+
+  function renderMetrics(metrics) {
+    var box = $("metrics"); clearChildren(box);
+    Object.keys(metrics).forEach(function (key) {
+      var score = metrics[key].score;
+      var card = el("div", "metric");
+      card.appendChild(el("div", "name", key.replace(/_/g, " ")));
+      var bar = el("div", "bar");
+      var fill = el("span");
+      fill.style.width = Math.max(0, Math.min(100, score)) + "%";
+      bar.appendChild(fill);
+      card.appendChild(bar);
+      card.appendChild(el("div", "val", score.toFixed(1)));
+      box.appendChild(card);
+    });
+  }
+
+  function renderAdvisory(data) {
+    var block = $("advisoryBlock");
+    if (!data.advisory_available || !data.advisory) {
+      block.style.display = "none";
+      return;
+    }
+    block.style.display = "";
+    var adv = data.advisory;
+
+    var tone = $("tone"); clearChildren(tone);
+    if (adv.tone) {
+      tone.appendChild(el("span", null,
+        "Tone: " + adv.tone.detected_tone + " (" + adv.tone.consistency + "). "));
+      tone.appendChild(el("span", null, adv.tone.note || ""));
+    }
+
+    var flags = $("flags"); clearChildren(flags);
+    (adv.generic_language || []).forEach(function (f) {
+      var li = el("li", "flag");
+      var head = el("div");
+      head.appendChild(el("span", "phrase", f.phrase));
+      head.appendChild(el("span", "sev", f.severity));
+      li.appendChild(head);
+      li.appendChild(el("div", "why", f.why));
+      li.appendChild(el("div", "sugg", f.suggestion));
+      flags.appendChild(li);
+    });
+
+    var clarity = $("clarity"); clearChildren(clarity);
+    if ((adv.clarity_notes || []).length) {
+      clarity.style.display = "";
+      clarity.appendChild(el("strong", null, "Clarity notes"));
+      var ul = el("ul"); ul.style.margin = "8px 0 0"; ul.style.paddingLeft = "18px";
+      adv.clarity_notes.forEach(function (n) { ul.appendChild(el("li", null, n)); });
+      clarity.appendChild(ul);
+    } else {
+      clarity.style.display = "none";
+    }
+  }
+
+  function renderRewrite(data, originalText) {
+    var block = $("rewriteBlock");
+    if (!data.rewrite_available || !data.rewrite) { block.style.display = "none"; return; }
+    block.style.display = "";
+    $("original").textContent = originalText;
+    $("improved").textContent = data.rewrite.rewritten_text;
+    var changes = $("changes"); clearChildren(changes);
+    (data.rewrite.changes || []).forEach(function (c) {
+      changes.appendChild(el("li", null, c));
+    });
+  }
+
+  function renderNotes(notes) {
+    var box = $("systemNotes"); clearChildren(box);
+    if (!notes || !notes.length) { box.style.display = "none"; return; }
+    box.style.display = "";
+    notes.forEach(function (n) { box.appendChild(el("div", null, n)); });
+  }
+
+  function render(data, originalText) {
+    $("composite").textContent = data.composite_score.toFixed(1);
+    $("composite").appendChild(el("small", null, "/100"));
+    $("wordcount").textContent = data.word_count;
+    $("sentcount").textContent = data.sentence_count;
+    $("engineVer").textContent = data.engine_version;
+    $("reqId").textContent = data.request_id;
+    renderMetrics(data.metrics);
+    renderAdvisory(data);
+    renderRewrite(data, originalText);
+    renderNotes(data.notes);
+    results.className = "show";
+  }
+
+  function analyze() {
+    var text = textEl.value;
+    if (!text.trim()) { setStatus("Enter some text to analyze.", "err"); return; }
+
+    var base = $("api").value.replace(/\/+$/, "");
+    var wantRewrite = $("rewrite").checked;
+    runBtn.disabled = true;
+    setStatus("Analyzing…", "busy");
+
+    fetch(base + "/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text, include_rewrite: wantRewrite })
+    })
+    .then(function (res) {
+      return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; });
+    })
+    .then(function (r) {
+      if (!r.ok) {
+        // Interface-voice errors: say what happened and what to do.
+        var msg;
+        if (r.status === 400) msg = "That input can't be analyzed (" + (r.body.reason || "invalid") + "). Try different text.";
+        else if (r.status === 429) msg = "You're going too fast. Wait " + Math.ceil(r.body.retry_after_sec || 5) + "s and try again.";
+        else if (r.status === 503) msg = "The service has reached its usage limit for now. Try again later.";
+        else msg = "Analysis failed (" + r.status + "). Try again.";
+        setStatus(msg, "err");
+        return;
+      }
+      setStatus("");
+      render(r.body, text);
+    })
+    .catch(function () {
+      setStatus("Couldn't reach the API at " + base + ". Check the endpoint URL and that the server is running.", "err");
+    })
+    .finally(function () { runBtn.disabled = false; });
+  }
+
+  runBtn.addEventListener("click", analyze);
+})();
+</script>
+</body>
+</html>

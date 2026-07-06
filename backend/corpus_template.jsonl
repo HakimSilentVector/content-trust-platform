@@ -1,0 +1,4 @@
+{"id": "good_01", "label": "good", "source": "REPLACE: real published blog post you respect", "text": "REPLACE with the actual text"}
+{"id": "good_02", "label": "good", "source": "REPLACE: real newsletter / LinkedIn post from a target customer", "text": "REPLACE with the actual text"}
+{"id": "bad_01", "label": "bad", "source": "REPLACE: raw untouched ChatGPT output", "text": "REPLACE with the actual text"}
+{"id": "bad_02", "label": "bad", "source": "REPLACE: weak real-world marketing copy", "text": "REPLACE with the actual text"}

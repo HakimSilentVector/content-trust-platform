@@ -1,0 +1,10 @@
+# Runtime
+fastapi==0.139.0
+uvicorn==0.34.0
+pydantic==2.*
+textstat==0.7.13
+openai==1.*
+
+# Test / CI
+pytest==9.*
+httpx==0.28.*

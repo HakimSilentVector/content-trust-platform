@@ -1,0 +1,34 @@
+# Render blueprint (infrastructure-as-code). Commit this so the service config
+# is version-controlled and reproducible, not click-configured in a dashboard.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: content-trust-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter                # smallest paid tier; free tier cold-starts hard
+    healthCheckPath: /health     # Render probes this; keep it cheap + secret-free
+    autoDeploy: true             # deploy on push to the connected branch
+
+    envVars:
+      # ENV drives prod hardening. "production" => docs disabled, strict CORS,
+      # no dev origin fallback. This is the safe default.
+      - key: ENV
+        value: production
+
+      # Comma-separated allowlist of your frontend origin(s). NO trailing slash.
+      # Set the real Vercel/production URL here. Never "*".
+      - key: ALLOWED_ORIGINS
+        sync: false              # set in dashboard, not committed
+
+      # Global daily spend ceiling in cost units (see middleware/spend_cap.py).
+      # Calibrate to real $ once you observe token usage.
+      - key: DAILY_SPEND_CAP
+        value: "1000"
+
+      # OpenAI key — SECRET. sync:false => you set it in the Render dashboard,
+      # it is never written to the repo or the image.
+      - key: OPENAI_API_KEY
+        sync: false

@@ -1,0 +1,18 @@
+# Secrets — NEVER commit. The OpenAI key lives here locally, in env on Render.
+.env
+.env.*
+*.key
+secrets/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
