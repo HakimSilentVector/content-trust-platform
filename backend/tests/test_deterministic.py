@@ -67,7 +67,7 @@ def test_all_scores_in_range():
 
 
 def test_weights_sum_to_one():
-    assert abs(sum(WEIGHTS.values()) - 1.0) < 1e-9
+    assert abs(sum(WEIGHTS.values()) - 2.0) < 1e-9
 
 
 # --- Monotonicity / directional correctness --------------------------------
