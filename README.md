@@ -6,7 +6,7 @@ layer is advisory only and can never move a measured score. Every security
 control is documented as threat -> control -> verification and proven by an
 automated test suite.
 
-**Live demo:** _deploying — URL coming_
+**Live demo:** https://content-trust-api.onrender.com
 **Security architecture:** [SECURITY.md](backend/SECURITY.md) ·
 **Backend detail:** [backend/README.md](backend/README.md)
 
@@ -59,6 +59,18 @@ cd backend
 pip install -r requirements.txt
 ENV=development uvicorn main:app --reload   # deterministic path, no key needed
 ```
+
+## Try the live API
+
+```bash
+curl -X POST https://content-trust-api.onrender.com/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"text":"The quarterly report shows revenue increased across all regions. Growth was strongest in the Pacific division, where new accounts were opened. Margins were compressed by rising costs. Leadership expects the trend to continue."}'
+```
+
+Returns `composite_score` plus the seven sub-metrics. The advisory layer is
+disabled in the keyless public demo (`advisory_available: false`) — the
+deterministic engine runs standalone, which is the point of the trust boundary.
 
 ## Roadmap
 
