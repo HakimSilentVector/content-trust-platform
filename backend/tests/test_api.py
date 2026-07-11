@@ -66,6 +66,26 @@ def test_health_ok():
     assert body["advisory_available"] is False   # no key in test env
 
 
+def test_root_self_describes():
+    r = client.get("/")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["service"] == "content-trust-platform"
+    # Endpoints are advertised so the root is genuinely self-describing.
+    assert "GET /health" in body["endpoints"]
+    assert "POST /analyze" in body["endpoints"]
+
+
+def test_root_leaks_no_internal_figures():
+    """Recon-minimisation (T1592): the public root must not expose
+    spend config, live spend, or advisory state — same rule /health follows."""
+    r = client.get("/")
+    text = r.text.lower()
+    # None of these internal signals should ever appear at the public root.
+    for leak in ("spend", "daily_cap", "advisory_available", "openai", "capacity"):
+        assert leak not in text
+
+
 def test_analyze_happy_path_deterministic_only():
     r = client.post("/analyze", json={"text": "Maria shipped the service to 12,000 users in March."})
     assert r.status_code == 200

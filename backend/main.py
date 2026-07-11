@@ -138,6 +138,24 @@ def _client_key(request: Request) -> str:
 
 # --- routes -----------------------------------------------------------------
 
+@app.get("/")
+async def root():
+    """Self-describing index. Public-safe by design: lists only
+    already-discoverable endpoints and exposes NO internal figures
+    (no version internals, spend config, or advisory state — same
+    reconnaissance-minimisation rule as /health, T1592)."""
+    return {
+        "service": "content-trust-platform",
+        "description": "Deterministic writing-analysis API with an optional, advisory-only LLM layer.",
+        "endpoints": {
+            "GET /health": "liveness probe",
+            "POST /analyze": "score text on 7 deterministic metrics; advisory layer optional",
+        },
+        "docs": "disabled in production",
+        "source": "https://github.com/HakimSilentVector/content-trust-platform",
+    }
+
+
 @app.get("/health")
 async def health():
     """Liveness probe. Deliberately minimal: exposes NO internal figures.
