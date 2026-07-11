@@ -56,8 +56,7 @@ jobs:
         run: |
           pip install pip-audit
           pip install -r requirements.txt
-          pip-audit || true   # start advisory; flip to hard-fail once triaged
-
+          pip-audit   # hard-fail: known-vulnerable dependency blocks the merge (OWASP A06:2021). Tree triaged clean 2026-07-11.
       - name: Secret scan (basic)
         # Cheap tripwire for a committed API key. Fails if a likely OpenAI key
         # pattern is found in tracked files.
