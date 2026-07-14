@@ -1,0 +1,35 @@
+version: 2
+
+# Pinning actions by commit SHA (see ci.yml) makes the supply chain immutable:
+# a repointed or compromised tag cannot silently change what runs in CI.
+# The tradeoff is that pins do NOT drift forward into security patches — a pin
+# left untended is a frozen, potentially vulnerable dependency.
+#
+# Dependabot closes that gap: it watches the upstream actions and opens a PR
+# when a pinned SHA falls behind, so updates arrive as a reviewable change
+# rather than never arriving at all. Pin + Dependabot is one control; either
+# half alone is a liability.
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"            # workflows live in .github/workflows
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "security"
+
+  # Runtime/test dependencies. pip-audit hard-fails CI on a known-vulnerable
+  # package (OWASP A06:2021), so a CVE lands as a red build; Dependabot gets
+  # ahead of that by proposing the bump before the audit trips.
+  - package-ecosystem: "pip"
+    directory: "/backend"     # requirements.txt lives in backend/
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
