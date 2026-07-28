@@ -1,5 +1,5 @@
 # Runtime
-fastapi==0.139.0
+fastapi==0.140.13
 uvicorn==0.34.0
 pydantic==2.*
 textstat==0.7.13
